@@ -111,19 +111,78 @@ If you don't choose **Always Allow** the first time, you'll get the auth prompt 
 1. In any app, type or paste `openrouter-api-key`, select that text.
 2. PopClip → **Get from Keychain**.
 3. (First time) Click **Always Allow** on the macOS prompt.
-4. The value is now on your clipboard. Paste with `Cmd+V` wherever you need it.
+4. The selection is replaced in place by the actual value. Done.
 
 **See what you have stored**
 
 1. Select any text (PopClip needs a selection to show its menu).
 2. PopClip → **List Keychain (jl-*)**.
-3. Pick an entry from the dialog → its value is copied to the clipboard.
+3. Pick an entry from the dialog → its value replaces your original selection in place.
 
 **Remove an entry**
 
 1. Select the entry name (e.g. `openrouter-api-key`).
 2. PopClip → **Delete from Keychain**.
 3. Confirm in the dialog.
+
+## Viewing your entries with the macOS Keychain Access app
+
+Sometimes you want to browse, audit or clean up your saved entries outside PopClip — for example to see what's there, change access controls, or remove old keys in bulk. macOS has a built-in app for this.
+
+> ⚠️ **Important**: on macOS Sequoia (15+) Apple split the system into two apps:
+> - **Passwords** (the new one) — only shows website / browser passwords. **Your `jl-*` API keys do NOT appear here.**
+> - **Keychain Access** (the classic one) — shows the full Keychain. **This is the one you need.**
+
+### Open the app
+
+- Spotlight (`⌘ + Space`) → type **`Keychain Access`** (or **`Acceso a Llaveros`** in Spanish) → Enter.
+- Or: Finder → **Applications → Utilities → Keychain Access.app**.
+
+### Browse your entries
+
+1. **Sidebar (left)** → expand **Default Keychains** → click **`login`**. This is where every entry the extension saves lives.
+2. **Categories (bottom-left)** → click **Passwords**. Filters out certificates and keys, leaving only the password-style items.
+3. **Search box (top-right)** → type `jl-` to see only the entries created by this extension. Type `averiado-` (or any extra prefix you've configured) to see those too.
+
+You'll see a list like:
+
+```
+jl-openrouter-api-key
+jl-test-api-key
+averiado-openrouter-api-key
+averiado-stripe-secret-key
+...
+```
+
+### View the value of an entry
+
+1. **Double-click** the entry row.
+2. In the sheet that opens, tick **Show password** at the bottom.
+3. macOS asks for your login password or Touch ID → confirm.
+4. The value appears in the field next to the checkbox.
+
+### Manage access permissions
+
+In the same detail window, click the **Access Control** tab to see which apps can read this entry without prompting:
+
+- **Allow all applications to access this item** — most permissive (not recommended for secrets).
+- **Confirm before allowing access** — prompts every time (most secure, most friction).
+- **Always allow access by these applications** — list the binaries that should be allowed silently. To grant the extension's silent access, add `/bin/bash` and `/usr/bin/security` to this list.
+
+### Delete entries
+
+- Select the row → press **Delete** / **Backspace**, or right-click → **Delete**.
+- macOS asks to confirm. After confirming the entry is gone — the extension's `List` will not show it anymore either.
+
+### Quick inventory from the terminal
+
+To dump just the **names** (not the values) of every entry in your login keychain to a file on the Desktop:
+
+```bash
+security dump-keychain 2>/dev/null | awk -F'"' '/"svce"<blob>=/{print $4}' | sort -u > ~/Desktop/keychain-inventory.txt
+```
+
+Open that file in any editor — it's plain text, one entry name per line. Useful for auditing or for finding all the prefixes you might want to add to the **Extra prefixes** option.
 
 ## How it works
 
@@ -132,23 +191,40 @@ The extension is a single PopClip shell action defined in [`JlKeychainTools.popc
 - [`jl_keychain.sh`](JlKeychainTools.popclipext/jl_keychain.sh) reads `$POPCLIP_TEXT` (the selection) and dispatches to one of `cmd_save`, `cmd_get`, `cmd_list`, `cmd_delete`.
 - For the Keychain calls it uses macOS' built-in `security` CLI (`add-generic-password`, `find-generic-password`, `delete-generic-password`, `dump-keychain`).
 - For the dialogs and notifications it uses `osascript` (AppleScript).
-- Get and List copy the retrieved value to the clipboard via `pbcopy`. **Nothing is ever written to stdout**, so PopClip's `paste-result` is **not** used — your selection is never replaced with the secret value, which would be a security risk if you're sharing your screen.
+- Get and List write the retrieved value to **stdout**, and PopClip pastes it in place via `after: paste-result`. So your selection is replaced by the actual value with a single click — no manual `Cmd+V` needed.
+- Save and Delete don't paste anything; they only show macOS notifications.
+
+The account field for every `security` call is derived from `id -un` (because PopClip strips `$USER` from the action environment).
 
 The script targets Bash 3.2 (the macOS default `/bin/bash`). No external dependencies.
+
+## Configuring extra prefixes
+
+By default, only entries whose service name starts with `jl-` are shown by **List** and accepted by **Get** / **Delete** without renaming. If you have older entries from other tools or projects (e.g. names starting with `averiado-`, `mycompany-`, `oldproject-`), open **PopClip → Preferences → Extensions → JL Keychain Tools** (gear icon) and fill the **Extra prefixes** field with a comma-separated list, e.g.:
+
+```
+averiado-,mycompany-,oldproject-
+```
+
+Effects:
+
+- **List** now includes entries with any of those prefixes (still excludes the rest of the system Keychain).
+- **Get** and **Delete** no longer auto-prepend `jl-` if the selected name already starts with one of the allowed prefixes — so selecting `averiado-openrouter-api-key` resolves to that exact entry.
+- **Save** is unaffected: new entries are still always created with `jl-` prefix. To create an entry under another prefix, use the `security` CLI directly.
 
 ## Security notes
 
 - All values are stored in the **login keychain**, encrypted by macOS and tied to your user account.
-- The extension uses **`-a $USER`** for the account field on every call.
-- The script never logs values, never sends anything to the network, and never writes to disk.
-- If your screen is being shared (Zoom, Teams, etc.), Get and List are safer than auto-paste because the value lands in your clipboard, not in the visible document.
+- The script never logs values, never sends anything to the network, and never writes secrets to disk (the debug log at `/tmp/jl_keychain_debug.log` only contains environment metadata, never `POPCLIP_TEXT` content beyond what's needed for the matching, and never the resolved value).
+- Get and List replace the selection in place. If your screen is being shared (Zoom, Teams, etc.), the value will become visible in the document. For a copy-only flow, retrieve from Keychain Access manually.
 
 ## Limitations
 
-- **List** uses `security dump-keychain` and filters by `jl-` prefix. On a heavily populated login keychain this can take 1-2 seconds.
+- **List** uses `security dump-keychain` and filters by allowed prefixes. On a heavily populated login keychain this can take 1-2 seconds.
 - The List dialog isn't searchable. If you ever store dozens of entries, scroll or rename for clarity.
 - All values are saved as **generic passwords**. Internet passwords (`security add-internet-password`) are not used here.
 - The script does not support multiple accounts per service. One value per `jl-name`.
+- **Save** always uses the `jl-` prefix. To save under another prefix, use the `security` CLI directly (see Configuring extra prefixes above).
 
 ## License
 
