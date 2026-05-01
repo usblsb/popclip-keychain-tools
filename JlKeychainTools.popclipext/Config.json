@@ -1,0 +1,38 @@
+{
+  "name": "JL Keychain Tools",
+  "identifier": "com.jl.keychain.tools",
+  "description": "Save, retrieve, list and delete API keys / passwords in macOS Keychain. All entries are namespaced with the 'jl-' prefix so they don't mix with system entries.",
+  "icon": "symbol:key.viewfinder",
+  "popclipVersion": 4069,
+
+  "actions": [
+    {
+      "title": "Save to Keychain",
+      "icon": "symbol:lock.fill",
+      "interpreter": "bash",
+      "shell script": "bash jl_keychain.sh save",
+      "requirements": ["text"]
+    },
+    {
+      "title": "Get from Keychain",
+      "icon": "symbol:key.fill",
+      "interpreter": "bash",
+      "shell script": "bash jl_keychain.sh get",
+      "requirements": ["text"]
+    },
+    {
+      "title": "List Keychain (jl-*)",
+      "icon": "symbol:list.bullet.rectangle",
+      "interpreter": "bash",
+      "shell script": "bash jl_keychain.sh list",
+      "requirements": ["text"]
+    },
+    {
+      "title": "Delete from Keychain",
+      "icon": "symbol:trash.fill",
+      "interpreter": "bash",
+      "shell script": "bash jl_keychain.sh delete",
+      "requirements": ["text"]
+    }
+  ]
+}
