@@ -10,7 +10,7 @@
       "identifier": "jl_help_how",
       "label": "How it works",
       "type": "heading",
-      "description": "Save: select a value (KEY=value or just the value). If no '=', a dialog asks for a name. Names are auto-prefixed with 'jl-'.\n\nGet: select the name, click Get. The value replaces your selection in place.\n\nList: select any text, click List. Pick a key from the dialog. Its value replaces your original selection.\n\nDelete: select the name, click Delete. Confirms before removing.\n\nAll entries live in the macOS login keychain, namespaced with the 'jl-' prefix so they don't mix with system entries (Wi-Fi, Safari passwords, etc.)."
+      "description": "Save: select KEY=value or just the value (dialog asks for a name if no '='). Names auto-prefixed with 'jl-'.\n\nGet: select the name → value replaces selection.\n\nList: select any text → pick from dialog → value replaces selection.\n\nDelete: select the name → confirms before removing.\n\nEntries live in macOS login keychain, namespaced with 'jl-' so they don't mix with system items (Wi-Fi, Safari, etc.)."
     },
     {
       "identifier": "jl_help_repo",
