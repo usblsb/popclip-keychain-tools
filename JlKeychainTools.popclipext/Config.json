@@ -17,6 +17,13 @@
       "label": "Repository & docs",
       "type": "heading",
       "description": "Source code, full documentation and issue tracker:\n\nhttps://github.com/usblsb/popclip-keychain-tools"
+    },
+    {
+      "identifier": "extra_prefixes",
+      "label": "Extra prefixes (comma-separated)",
+      "type": "string",
+      "defaultValue": "",
+      "description": "Additional prefixes to include in List, Get and Delete (besides the always-on 'jl-'). Comma-separated, no spaces inside each prefix. Example: averiado-,mycompany-,oldproject-"
     }
   ],
 

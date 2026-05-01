@@ -33,6 +33,31 @@ fi
 jl_log() { /usr/bin/printf '%s\n' "$*" >> "$JL_LOG_FILE" 2>&1; }
 jl_log "JL_ACCOUNT resolved to: ${JL_ACCOUNT}"
 
+# Build the list of allowed prefixes: 'jl-' is always on, plus any user-defined
+# extras from POPCLIP_OPTION_EXTRA_PREFIXES (comma-separated).
+# JL_PREFIX_LIST is space-separated for iteration.
+# JL_PREFIX_REGEX is a grep -E alternation rooted at start-of-line.
+JL_PREFIX_LIST="${JL_PREFIX}"
+JL_PREFIX_REGEX_BODY="${JL_PREFIX}"
+_extra="${POPCLIP_OPTION_EXTRA_PREFIXES:-}"
+if [ -n "$_extra" ]; then
+    _OLD_IFS="$IFS"
+    IFS=','
+    for _p in $_extra; do
+        _p_trim="$(/usr/bin/printf '%s' "$_p" | /usr/bin/sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        if [ -n "$_p_trim" ]; then
+            JL_PREFIX_LIST="${JL_PREFIX_LIST} ${_p_trim}"
+            # Escape regex metachars in the prefix before adding to the alternation
+            _p_esc="$(/usr/bin/printf '%s' "$_p_trim" | /usr/bin/sed 's/[][\.*^$(){}?+|/]/\\&/g')"
+            JL_PREFIX_REGEX_BODY="${JL_PREFIX_REGEX_BODY}|${_p_esc}"
+        fi
+    done
+    IFS="$_OLD_IFS"
+fi
+JL_PREFIX_REGEX="^(${JL_PREFIX_REGEX_BODY})"
+jl_log "JL_PREFIX_LIST: ${JL_PREFIX_LIST}"
+jl_log "JL_PREFIX_REGEX: ${JL_PREFIX_REGEX}"
+
 # Trap to log any error before exit
 trap 'jl_log "EXIT code=$? line=$LINENO command=[$BASH_COMMAND]"' EXIT
 
@@ -176,7 +201,9 @@ parse_env_line() {
     /usr/bin/printf '%s|%s' "$name" "$value"
 }
 
-# Normalize service name: lowercase, [^a-z0-9-] -> '-', collapse '-', ensure jl- prefix.
+# Normalize service name: lowercase, [^a-z0-9-] -> '-', collapse '-'.
+# Add 'jl-' prefix only if the result doesn't already start with one of the
+# allowed prefixes (jl- + user-defined extras).
 normalize_name() {
     local raw
     raw="$(trim "$1")"
@@ -184,10 +211,18 @@ normalize_name() {
     norm="$(/usr/bin/printf '%s' "$raw" \
         | /usr/bin/tr '[:upper:]' '[:lower:]' \
         | /usr/bin/sed -e 's/[^a-z0-9-]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//')"
-    case "$norm" in
-        "${JL_PREFIX}"*) ;;
-        *) norm="${JL_PREFIX}${norm}" ;;
-    esac
+
+    local already_prefixed="no"
+    local _p
+    for _p in $JL_PREFIX_LIST; do
+        case "$norm" in
+            "${_p}"*) already_prefixed="yes"; break ;;
+        esac
+    done
+
+    if [ "$already_prefixed" = "no" ]; then
+        norm="${JL_PREFIX}${norm}"
+    fi
     /usr/bin/printf '%s' "$norm"
 }
 
@@ -267,15 +302,15 @@ cmd_get() {
 }
 
 cmd_list() {
-    # Extract all service names matching jl- prefix from the default keychain.
+    # Extract service names matching the allowed prefixes from the default keychain.
     local items
     items="$(/usr/bin/security dump-keychain 2>/dev/null \
         | /usr/bin/awk -F'"' '/"svce"<blob>=/{print $4}' \
-        | /usr/bin/grep "^${JL_PREFIX}" \
+        | /usr/bin/grep -E "${JL_PREFIX_REGEX}" \
         | /usr/bin/sort -u)"
 
     if [ -z "$items" ]; then
-        show_notify "No keys found with prefix '${JL_PREFIX}'"
+        show_notify "No keys found with allowed prefixes (${JL_PREFIX_LIST})"
         exit 0
     fi
 
