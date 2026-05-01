@@ -25,11 +25,15 @@ JL_LOG_FILE="/tmp/jl_keychain_debug.log"
 set -u
 
 JL_PREFIX="jl-"
-# Fallback for USER in case PopClip's environment doesn't set it.
-JL_ACCOUNT="${USER:-$(/usr/bin/id -un 2>/dev/null)}"
+# PopClip strips $USER from the env, so always derive it from `id -un`.
+JL_ACCOUNT="$(/usr/bin/id -un 2>/dev/null)"
+if [ -z "$JL_ACCOUNT" ]; then
+    JL_ACCOUNT="${USER:-}"
+fi
+jl_log() { /usr/bin/printf '%s\n' "$*" >> "$JL_LOG_FILE" 2>&1; }
+jl_log "JL_ACCOUNT resolved to: ${JL_ACCOUNT}"
 
 # Trap to log any error before exit
-jl_log() { /usr/bin/printf '%s\n' "$*" >> "$JL_LOG_FILE" 2>&1; }
 trap 'jl_log "EXIT code=$? line=$LINENO command=[$BASH_COMMAND]"' EXIT
 
 # ----------------------------------------------------------------------------
@@ -258,8 +262,8 @@ cmd_get() {
         exit 1
     fi
 
-    /usr/bin/printf '%s' "$value" | /usr/bin/pbcopy
-    show_notify "Copied ${norm_name} to clipboard"
+    # PopClip pastes whatever we send to stdout (after: paste-result).
+    /usr/bin/printf '%s' "$value"
 }
 
 cmd_list() {
@@ -298,8 +302,8 @@ cmd_list() {
         exit 1
     fi
 
-    /usr/bin/printf '%s' "$value" | /usr/bin/pbcopy
-    show_notify "Copied ${choice} to clipboard"
+    # PopClip pastes whatever we send to stdout (after: paste-result).
+    /usr/bin/printf '%s' "$value"
 }
 
 cmd_delete() {
