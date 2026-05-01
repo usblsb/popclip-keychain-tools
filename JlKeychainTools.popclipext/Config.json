@@ -5,6 +5,21 @@
   "icon": "symbol:key.viewfinder",
   "popclipVersion": 4069,
 
+  "options": [
+    {
+      "identifier": "jl_help_how",
+      "label": "How it works",
+      "type": "heading",
+      "description": "Save: select a value (KEY=value or just the value). If no '=', a dialog asks for a name. Names are auto-prefixed with 'jl-'.\n\nGet: select the name, click Get. The value replaces your selection in place.\n\nList: select any text, click List. Pick a key from the dialog. Its value replaces your original selection.\n\nDelete: select the name, click Delete. Confirms before removing.\n\nAll entries live in the macOS login keychain, namespaced with the 'jl-' prefix so they don't mix with system entries (Wi-Fi, Safari passwords, etc.)."
+    },
+    {
+      "identifier": "jl_help_repo",
+      "label": "Repository & docs",
+      "type": "heading",
+      "description": "Source code, full documentation and issue tracker:\n\nhttps://github.com/usblsb/popclip-keychain-tools"
+    }
+  ],
+
   "actions": [
     {
       "title": "Save to Keychain",
