@@ -10,28 +10,28 @@
       "title": "Save to Keychain",
       "icon": "symbol:lock.fill",
       "interpreter": "bash",
-      "shell script": "bash jl_keychain.sh save",
+      "shell script": "./jl_keychain.sh save",
       "requirements": ["text"]
     },
     {
       "title": "Get from Keychain",
       "icon": "symbol:key.fill",
       "interpreter": "bash",
-      "shell script": "bash jl_keychain.sh get",
+      "shell script": "./jl_keychain.sh get",
       "requirements": ["text"]
     },
     {
       "title": "List Keychain (jl-*)",
       "icon": "symbol:list.bullet.rectangle",
       "interpreter": "bash",
-      "shell script": "bash jl_keychain.sh list",
+      "shell script": "./jl_keychain.sh list",
       "requirements": ["text"]
     },
     {
       "title": "Delete from Keychain",
       "icon": "symbol:trash.fill",
       "interpreter": "bash",
-      "shell script": "bash jl_keychain.sh delete",
+      "shell script": "./jl_keychain.sh delete",
       "requirements": ["text"]
     }
   ]

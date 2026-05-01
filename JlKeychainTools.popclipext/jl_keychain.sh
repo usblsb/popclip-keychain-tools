@@ -6,10 +6,31 @@
 # Usage: jl_keychain.sh <save|get|list|delete>
 # Reads $POPCLIP_TEXT for save/get/delete (the selection from PopClip).
 # ============================================================================
+
+# Debug log: capture every invocation so we can diagnose silent failures from
+# inside PopClip's restricted environment. Safe to keep enabled.
+JL_LOG_FILE="/tmp/jl_keychain_debug.log"
+{
+    /usr/bin/printf '\n========== %s ==========\n' "$(/bin/date '+%Y-%m-%d %H:%M:%S')"
+    /usr/bin/printf 'argv[1]      : %s\n' "${1:-<empty>}"
+    /usr/bin/printf 'PWD          : %s\n' "$PWD"
+    /usr/bin/printf 'USER         : %s\n' "${USER:-<unset>}"
+    /usr/bin/printf 'HOME         : %s\n' "${HOME:-<unset>}"
+    /usr/bin/printf 'PATH         : %s\n' "${PATH:-<unset>}"
+    /usr/bin/printf 'BASH_VERSION : %s\n' "${BASH_VERSION:-<unset>}"
+    /usr/bin/printf 'POPCLIP_TEXT : %s\n' "${POPCLIP_TEXT:-<unset>}"
+    /usr/bin/printf 'POPCLIP_BUNDLE_PATH : %s\n' "${POPCLIP_BUNDLE_PATH:-<unset>}"
+} >> "$JL_LOG_FILE" 2>&1
+
 set -u
 
 JL_PREFIX="jl-"
-JL_ACCOUNT="${USER}"
+# Fallback for USER in case PopClip's environment doesn't set it.
+JL_ACCOUNT="${USER:-$(/usr/bin/id -un 2>/dev/null)}"
+
+# Trap to log any error before exit
+jl_log() { /usr/bin/printf '%s\n' "$*" >> "$JL_LOG_FILE" 2>&1; }
+trap 'jl_log "EXIT code=$? line=$LINENO command=[$BASH_COMMAND]"' EXIT
 
 # ----------------------------------------------------------------------------
 # AppleScript helpers
